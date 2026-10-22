@@ -390,5 +390,26 @@ console.log(
 );
 </script>
 
+<script>
+async function verificarLoginFinanceiro() {
+  if (!supabaseFinanceiro) {
+    console.warn("Supabase não configurado.");
+    return;
+  }
+
+  const { data, error } =
+    await supabaseFinanceiro.auth.getUser();
+
+  if (error || !data.user) {
+    console.log("Financeiro V7: login necessário");
+    return;
+  }
+
+  console.log("Financeiro V7: usuário autenticado");
+}
+
+verificarLoginFinanceiro();
+</script>
+
 </body>
 </html>
