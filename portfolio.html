@@ -290,7 +290,10 @@
 
         const card = document.createElement("article");
         card.className = "project";
-
+card.style.cursor = "pointer";
+card.tabIndex = 0;
+card.setAttribute("role", "button");
+card.setAttribute("aria-label", "Abrir projeto " + project.title);
         const body = document.createElement("div");
         body.className = "project-body";
 
@@ -336,12 +339,95 @@
             body.appendChild(gallery);
           }
         }
-
+card.addEventListener("click", () => {
+  openProjectDetails(project, niche);
+});
         card.appendChild(body);
         projectsEl.appendChild(card);
       });
     }
+function openProjectDetails(project, niche) {
+  const overlay = document.createElement("div");
 
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  `;
+
+  const panel = document.createElement("div");
+
+  panel.style.cssText = `
+    background: #0E263E;
+    color: #EEF2F7;
+    border: 1px solid #D5AA55;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+  `;
+
+  const close = document.createElement("button");
+  close.textContent = "✕ Fechar";
+  close.style.cssText = `
+    float: right;
+    background: #D5AA55;
+    color: #08131F;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  `;
+
+  const title = document.createElement("h2");
+  title.textContent = project.title || "Projeto";
+
+  const category = document.createElement("p");
+  category.textContent = niche?.name || "Portfólio";
+  category.style.color = "#D5AA55";
+
+  const description = document.createElement("p");
+  description.textContent = project.description || "";
+  description.style.whiteSpace = "pre-line";
+
+  const gallery = document.createElement("div");
+  gallery.style.cssText = `
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+  `;
+
+  (project.photoUrls || []).forEach(url => {
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = project.title || "Foto do projeto";
+    img.style.cssText = `
+      width: 100%;
+      border-radius: 10px;
+      cursor: pointer;
+    `;
+    img.onclick = () => openImage(url);
+    gallery.appendChild(img);
+  });
+
+  panel.append(close, category, title, description, gallery);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  close.onclick = () => overlay.remove();
+
+  overlay.onclick = event => {
+    if (event.target === overlay) overlay.remove();
+  };
+}
     async function loadPortfolio() {
       const config = window.STORYMAKER_CONFIG;
 
