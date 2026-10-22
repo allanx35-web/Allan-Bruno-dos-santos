@@ -1,0 +1,216 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Financeiro V7 | A. S. Conteúdo Digital</title>
+<style>
+:root{font-family:Arial,sans-serif;color:#eef3f8;background:#091724}
+*{box-sizing:border-box}
+body{margin:0;background:#091724}
+header{background:#10273b;padding:28px 18px;border-bottom:1px solid #d5aa5540}
+header small{color:#d5aa55;letter-spacing:2px}
+h1{font-size:28px;margin:12px 0 5px}
+h2{font-size:21px;margin-top:0}
+p{color:#aebccc}
+main{max-width:850px;margin:auto;padding:16px}
+.card{background:#14283d;border:1px solid #d5aa5540;border-radius:18px;padding:20px;margin-bottom:18px}
+label{display:block;color:#c3cfda;margin:14px 0 7px}
+input,select{width:100%;background:#0b1b2b;color:white;border:1px solid #d5aa5555;border-radius:10px;padding:14px;font-size:16px}
+button{border:0;border-radius:10px;padding:13px 17px;background:#d5aa55;color:#11263a;font-weight:bold;font-size:15px;cursor:pointer}
+button.secondary{background:#273c50;color:#f2d69a}
+button.danger{background:#542b35;color:#fff}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{background:#0c2032;padding:15px;border-radius:12px}
+.metric small{display:block;color:#b9c7d3;margin-bottom:8px}
+.metric strong{font-size:21px;color:#d5aa55}
+.project{border:1px solid #d5aa5540;border-radius:12px;padding:15px;margin-top:12px}
+.installment{background:#0b2032;border-radius:10px;padding:12px;margin:10px 0}
+.status{font-size:12px;font-weight:bold;color:#d5aa55}
+.paid{color:#76d8a5}
+.late{color:#ff9797}
+.hidden{display:none}
+.note{font-size:12px;line-height:1.5;color:#b6c2cd}
+@media(max-width:500px){.summary{grid-template-columns:1fr 1fr}.metric strong{font-size:17px}}
+</style>
+</head>
+<body>
+<header>
+<small>A. S. CONTEÚDO DIGITAL V7</small>
+<h1>Financeiro de projetos</h1>
+<p>Contratos, parcelas e recebimentos</p>
+</header>
+<main>
+<section class="card">
+<h2>Novo contrato</h2>
+<label>Cliente</label>
+<input id="cliente" placeholder="Nome do cliente">
+<label>Projeto</label>
+<input id="projeto" placeholder="Ex.: Produção de vídeos">
+<label>Valor contratado (R$)</label>
+<input id="valor" type="number" min="0.01" step="0.01" placeholder="3000">
+<label>Modalidade</label>
+<select id="modalidade" onchange="alternar()">
+<option value="mensal">Parcelas mensais iguais</option>
+<option value="personalizada">Parcelas personalizadas</option>
+</select>
+<div id="mensal">
+<label>Quantidade de parcelas</label>
+<input id="quantidade" type="number" min="1" value="5">
+<label>Primeiro vencimento</label>
+<input id="vencimento" type="date">
+</div>
+<div id="personalizada" class="hidden">
+<p>Defina o valor e a data de cada parcela.</p>
+<div id="parcelasCustom"></div>
+<button class="secondary" type="button" onclick="adicionarParcela()">+ Adicionar parcela</button>
+</div>
+<div class="actions">
+<button onclick="salvarContrato()">Salvar contrato</button>
+<button class="secondary" onclick="limpar()">Limpar formulário</button>
+</div>
+</section>
+
+<section class="card">
+<h2>Resumo financeiro</h2>
+<div class="summary">
+<div class="metric"><small>Contratado</small><strong id="totalContratado">R$ 0,00</strong></div>
+<div class="metric"><small>Recebido</small><strong id="totalRecebido">R$ 0,00</strong></div>
+<div class="metric"><small>Saldo devedor</small><strong id="saldo">R$ 0,00</strong></div>
+<div class="metric"><small>Parcelas atrasadas</small><strong id="atrasadas">0</strong></div>
+</div>
+</section>
+
+<section class="card">
+<h2>Projetos e pagamentos</h2>
+<div id="lista"></div>
+</section>
+
+<p class="note">Versão de testes: os dados ficam salvos somente neste navegador. Ainda não há sincronização com o Supabase. Não utilize para controle financeiro definitivo até ativarmos a nuvem.</p>
+</main>
+<script>
+const KEY="as_financeiro_v7_teste";
+let contratos=[];
+try{contratos=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){contratos=[]}
+const el=id=>document.getElementById(id);
+const moeda=n=>Number(n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const cent=n=>Math.round(Number(n)*100);
+const hoje=()=>new Date().toISOString().slice(0,10);
+const uid=()=>crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random());
+function gravar(){localStorage.setItem(KEY,JSON.stringify(contratos));renderizar()}
+function alternar(){
+const custom=el("modalidade").value==="personalizada";
+el("mensal").classList.toggle("hidden",custom);
+el("personalizada").classList.toggle("hidden",!custom);
+if(custom&&!el("parcelasCustom").children.length)adicionarParcela();
+}
+function adicionarParcela(){
+const div=document.createElement("div");
+div.className="installment";
+div.innerHTML='<label>Valor da parcela (R$)</label><input class="customValor" type="number" min="0.01" step="0.01"><label>Vencimento</label><input class="customData" type="date"><div class="actions"><button type="button" class="danger" onclick="this.closest(\'.installment\').remove()">Remover</button></div>';
+el("parcelasCustom").appendChild(div);
+}
+function somarMeses(data,meses){
+const [a,m,d]=data.split("-").map(Number);
+const base=new Date(Date.UTC(a,m-1+meses,1));
+const ultimo=new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth()+1,0)).getUTCDate();
+base.setUTCDate(Math.min(d,ultimo));
+return base.toISOString().slice(0,10);
+}
+function salvarContrato(){
+const cliente=el("cliente").value.trim();
+const projeto=el("projeto").value.trim();
+const total=cent(el("valor").value);
+if(!cliente||!projeto||!Number.isSafeInteger(total)||total<=0)return alert("Preencha cliente, projeto e valor válido.");
+let parcelas=[];
+if(el("modalidade").value==="mensal"){
+const qtd=Number(el("quantidade").value);
+const data=el("vencimento").value;
+if(!Number.isInteger(qtd)||qtd<1||qtd>120||!data)return alert("Informe quantidade e primeiro vencimento.");
+const base=Math.floor(total/qtd);
+for(let i=0;i<qtd;i++){
+const valor=i===qtd-1?total-base*(qtd-1):base;
+parcelas.push({id:uid(),vencimento:somarMeses(data,i),valor,pagamentos:[]});
+}
+}else{
+const itens=[...el("parcelasCustom").children];
+if(!itens.length)return alert("Adicione pelo menos uma parcela.");
+for(const item of itens){
+const valor=cent(item.querySelector(".customValor").value);
+const data=item.querySelector(".customData").value;
+if(!Number.isSafeInteger(valor)||valor<=0||!data)return alert("Confira os valores e vencimentos.");
+parcelas.push({id:uid(),vencimento:data,valor,pagamentos:[]});
+}
+if(parcelas.reduce((s,p)=>s+p.valor,0)!==total)return alert("A soma das parcelas deve ser igual ao valor contratado.");
+}
+contratos.push({id:uid(),cliente,projeto,total,parcelas});
+gravar();limpar();alert("Contrato salvo!");
+}
+function limpar(){
+["cliente","projeto","valor","vencimento"].forEach(id=>el(id).value="");
+el("quantidade").value=5;
+el("modalidade").value="mensal";
+el("parcelasCustom").innerHTML="";
+alternar();
+}
+function recebido(p){return p.pagamentos.reduce((s,x)=>s+x.valor,0)}
+function registrar(ci,pi){
+const c=contratos[ci],p=c.parcelas[pi];
+const falta=p.valor-recebido(p);
+const resposta=prompt("Valor recebido (R$):",(falta/100).toFixed(2));
+if(resposta===null)return;
+const valor=cent(resposta.replace(",","."));
+if(!Number.isSafeInteger(valor)||valor<=0||valor>falta)return alert("Informe um valor válido, até o saldo da parcela.");
+const data=prompt("Data do pagamento (AAAA-MM-DD):",hoje());
+if(data===null)return;
+if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||Number.isNaN(Date.parse(data)))return alert("Data inválida.");
+p.pagamentos.push({id:uid(),valor,data});
+gravar();
+}
+function excluir(ci){
+if(!confirm("Excluir este contrato e todo seu histórico de pagamentos?"))return;
+contratos.splice(ci,1);gravar();
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function dataBR(s){const [a,m,d]=s.split("-");return d+"/"+m+"/"+a}
+function renderizar(){
+let contratado=0,recebidoTotal=0,atrasos=0;
+const lista=el("lista");lista.innerHTML="";
+if(!contratos.length)lista.innerHTML="<p>Nenhum contrato cadastrado.</p>";
+contratos.forEach((c,ci)=>{
+contratado+=c.total;
+const div=document.createElement("div");
+div.className="project";
+let html='<h3>'+esc(c.cliente)+'</h3><p>'+esc(c.projeto)+'</p><p>Valor contratado: <strong>'+moeda(c.total/100)+'</strong></p>';
+c.parcelas.forEach((p,pi)=>{
+const pago=recebido(p),falta=p.valor-pago;
+recebidoTotal+=pago;
+const atrasado=falta>0&&p.vencimento<hoje();
+if(atrasado)atrasos++;
+const status=falta===0?"Pago":atrasado?"Atrasado":pago>0?"Parcial":"Pendente";
+html+='<div class="installment"><div class="row"><strong>Parcela '+(pi+1)+'</strong><span class="status '+(falta===0?"paid":atrasado?"late":"")+'">'+status+'</span></div>';
+html+='<p>Vence: '+dataBR(p.vencimento)+' | Valor: '+moeda(p.valor/100)+'</p>';
+html+='<p>Recebido: '+moeda(pago/100)+' | Falta: '+moeda(falta/100)+'</p>';
+if(falta>0)html+='<button onclick="registrar('+ci+','+pi+')">Registrar pagamento</button>';
+if(p.pagamentos.length){
+html+='<p class="note">Histórico:</p>';
+p.pagamentos.forEach(x=>html+='<p class="note">'+dataBR(x.data)+' — '+moeda(x.valor/100)+'</p>');
+}
+html+='</div>';
+});
+html+='<div class="actions"><button class="danger" onclick="excluir('+ci+')">Excluir contrato</button></div>';
+div.innerHTML=html;
+lista.appendChild(div);
+});
+el("totalContratado").textContent=moeda(contratado/100);
+el("totalRecebido").textContent=moeda(recebidoTotal/100);
+el("saldo").textContent=moeda((contratado-recebidoTotal)/100);
+el("atrasadas").textContent=atrasos;
+}
+renderizar();
+</script>
+</body>
+</html>
