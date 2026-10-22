@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portfólio | A. S. Conteúdo Digital</title>
+<style>
+:root {
+  --bg:#08131f;
+  --navy:#0e263e;
+  --gold:#d5aa55;
+  --text:#eef2f7;
+  --muted:#aebfd0;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+header {
+  padding:22px 6%;
+  background:var(--navy);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+}
+.logo {font-weight:bold;color:var(--gold)}
+a {color:var(--gold);text-decoration:none}
+.hero {
+  padding:85px 6%;
+  background:linear-gradient(135deg,#0e263e,#08131f);
+}
+.hero small {
+  color:var(--gold);
+  letter-spacing:3px;
+  text-transform:uppercase;
+}
+h1 {font-size:clamp(38px,7vw,75px);line-height:1.1}
+h1 span {color:var(--gold)}
+.hero p {color:var(--muted);max-width:650px;line-height:1.7}
+main {padding:45px 6% 90px}
+h2 {font-size:32px}
+.filters {display:flex;flex-wrap:wrap;gap:10px;margin:30px 0}
+.filters button {
+  border:1px solid #d5aa5555;
+  background:var(--navy);
+  color:white;
+  border-radius:25px;
+  padding:12px 18px;
+  cursor:pointer;
+}
+.filters button.active {
+  background:var(--gold);
+  color:#08131f;
+}
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:24px;
+}
+.card {
+  background:var(--navy);
+  border:1px solid #d5aa5533;
+  border-radius:18px;
+  overflow:hidden;
+  cursor:pointer;
+}
+.card img {
+  width:100%;
+  height:250px;
+  object-fit:cover;
+  display:block;
+}
+.placeholder {
+  height:250px;
+  display:grid;
+  place-items:center;
+  background:#172b3d;
+  color:var(--gold);
+  font-size:45px;
+}
+.info {padding:22px}
+.category {color:var(--gold);font-size:13px}
+.info h3 {margin:12px 0}
+.info p {color:var(--muted);line-height:1.6}
+.message {
+  grid-column:1/-1;
+  padding:35px;
+  text-align:center;
+  color:var(--muted);
+}
+footer {
+  border-top:1px solid #d5aa5533;
+  padding:28px 6%;
+  color:var(--muted);
+  text-align:center;
+}
+.modal {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:#000e;
+  z-index:100;
+  padding:20px;
+  align-items:center;
+  justify-content:center;
+}
+.modal.open {display:flex}
+.modal-box {
+  width:min(850px,100%);
+  max-height:95vh;
+  overflow:auto;
+  background:var(--navy);
+  border-radius:18px;
+  padding:20px;
+}
+.modal-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.modal button {
+  background:var(--gold);
+  color:#08131f;
+  border:0;
+  padding:10px 15px;
+  border-radius:8px;
+  cursor:pointer;
+}
+.modal img {
+  width:100%;
+  max-height:60vh;
+  object-fit:contain;
+  margin:15px 0;
+}
+.modal p {color:var(--muted)}
+.gallery-nav {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+@media(max-width:600px) {
+  header {font-size:13px}
+  .hero {padding:60px 6%}
+  main {padding-top:30px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">A. S. Conteúdo Digital</div>
+  <a href="/">← Página principal</a>
+</header>
+
+<section class="hero">
+  <small>Portfólio · Produção criativa</small>
+  <h1>Histórias, marcas e projetos que <span>ganham vida.</span></h1>
+  <p>Conheça nossos trabalhos em fotografia, gastronomia, eventos, marcas e produção de conteúdo.</p>
+</section>
+
+<main>
+  <h2>Nossos trabalhos</h2>
+  <p style="color:var(--muted)">Explore os projetos publicados em cada categoria.</p>
+  <div id="filters" class="filters"></div>
+  <div id="projects" class="grid">
+    <div class="message">Carregando portfólio...</div>
+  </div>
+</main>
+
+<footer>© A. S. Conteúdo Digital · Ideias que se transformam em histórias.</footer>
+
+<div id="modal" class="modal">
+  <div class="modal-box">
+    <div class="modal-top">
+      <h2 id="modalTitle"></h2>
+      <button onclick="closeModal()">Fechar ×</button>
+    </div>
+    <img id="modalImage" alt="Foto do projeto">
+    <div class="gallery-nav">
+      <button onclick="changePhoto(-1)">← Anterior</button>
+      <span id="photoCount"></span>
+      <button onclick="changePhoto(1)">Próxima →</button>
+    </div>
+    <p id="modalDescription"></p>
+  </div>
+</div>
+
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+let projects = [];
+let niches = [];
+let activeFilter = "all";
+let currentProject = null;
+let currentPhoto = 0;
+
+const $ = id => document.getElementById(id);
+
+function getNicheName(id) {
+  const niche = niches.find(n => n.id === id);
+  return niche ? niche.name : "Projeto criativo";
+}
+
+function getPhotoUrl(value, client) {
+  if (!value || typeof value !== "string") return "";
+  if (value.startsWith("https://")) return value;
+  return client.storage
+    .from("portfolio-photos")
+    .getPublicUrl(value).data.publicUrl;
+}
+
+function renderFilters() {
+  const area = $("filters");
+  area.innerHTML = "";
+
+  const choices = [
+    {id:"all",name:"Todos os projetos"},
+    ...niches.filter(n => projects.some(p => p.niche_id === n.id))
+  ];
+
+  choices.forEach(niche => {
+    const button = document.createElement("button");
+    button.textContent = niche.name;
+    button.className = activeFilter === niche.id ? "active" : "";
+    button.onclick = () => {
+      activeFilter = niche.id;
+      renderFilters();
+      renderProjects();
+    };
+    area.appendChild(button);
+  });
+}
+
+function renderProjects() {
+  const area = $("projects");
+  area.innerHTML = "";
+
+  const visible = activeFilter === "all"
+    ? projects
+    : projects.filter(p => p.niche_id === activeFilter);
+
+  if (!visible.length) {
+    const message = document.createElement("div");
+    message.className = "message";
+    message.textContent = "Ainda não há projetos publicados nesta categoria.";
+    area.appendChild(message);
+    return;
+  }
+
+  visible.forEach(project => {
+    const card = document.createElement("article");
+    card.className = "card";
+
+    if (project.photoUrls.length) {
+      const image = document.createElement("img");
+      image.src = project.photoUrls[0];
+      image.alt = project.title;
+      image.loading = "lazy";
+      card.appendChild(image);
+    } else {
+      const placeholder = document.createElement("div");
+      placeholder.className = "placeholder";
+      placeholder.textContent = "A.S.";
+      card.appendChild(placeholder);
+    }
+
+    const info = document.createElement("div");
+    info.className = "info";
+
+    const category = document.createElement("div");
+    category.className = "category";
+    category.textContent = getNicheName(project.niche_id);
+
+    const title = document.createElement("h3");
+    title.textContent = project.title;
+
+    const description = document.createElement("p");
+    description.textContent = project.description || "";
+
+    info.append(category,title,description);
+    card.appendChild(info);
+    card.onclick = () => openModal(project);
+    area.appendChild(card);
+  });
+}
+
+function openModal(project) {
+  currentProject = project;
+  currentPhoto = 0;
+  $("modalTitle").textContent = project.title;
+  $("modalDescription").textContent = project.description || "";
+  updateModalPhoto();
+  $("modal").classList.add("open");
+}
+
+function updateModalPhoto() {
+  const photos = currentProject?.photoUrls || [];
+  const image = $("modalImage");
+  const navigation = document.querySelector(".gallery-nav");
+
+  if (!photos.length) {
+    image.style.display = "none";
+    navigation.style.display = "none";
+    return;
+  }
+
+  image.style.display = "block";
+  navigation.style.display = "flex";
+  image.src = photos[currentPhoto];
+  $("photoCount").textContent =
+    (currentPhoto + 1) + " de " + photos.length;
+}
+
+function changePhoto(direction) {
+  const photos = currentProject?.photoUrls || [];
+  if (!photos.length) return;
+  currentPhoto = (currentPhoto + direction + photos.length) % photos.length;
+  updateModalPhoto();
+}
+
+function closeModal() {
+  $("modal").classList.remove("open");
+  currentProject = null;
+}
+
+$("modal").addEventListener("click", event => {
+  if (event.target === $("modal")) closeModal();
+});
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") closeModal();
+});
+
+async function loadPortfolio() {
+  const config = window.STORYMAKER_CONFIG || {};
+
+  if (!config.supabaseUrl || !config.supabaseAnonKey || !window.supabase) {
+    $("projects").textContent = "Não foi possível carregar a configuração do portfólio.";
+    return;
+  }
+
+  try {
+    const client = window.supabase.createClient(
+      config.supabaseUrl,
+      config.supabaseAnonKey
+    );
+
+    const [nichesResult, projectsResult] = await Promise.all([
+      client.from("portfolio_niches").select("id,name").order("name"),
+      client.from("portfolio_projects")
+        .select("id,niche_id,title,description,photos,created_at")
+        .eq("published",true)
+        .order("created_at",{ascending:false})
+    ]);
+
+    if (nichesResult.error) throw nichesResult.error;
+    if (projectsResult.error) throw projectsResult.error;
+
+    niches = nichesResult.data || [];
+    projects = (projectsResult.data || []).map(project => ({
+      ...project,
+      photoUrls: (Array.isArray(project.photos) ? project.photos : [])
+        .map(photo => getPhotoUrl(photo,client))
+        .filter(Boolean)
+    }));
+
+    renderFilters();
+    renderProjects();
+
+  } catch (error) {
+    console.error(error);
+    $("projects").textContent =
+      "Não foi possível carregar os projetos. Tente novamente.";
+  }
+}
+
+loadPortfolio();
+</script>
+</body>
+</html>
