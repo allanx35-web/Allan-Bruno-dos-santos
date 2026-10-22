@@ -410,6 +410,85 @@ async function verificarLoginFinanceiro() {
 
 verificarLoginFinanceiro();
 </script>
+  
+<script>
+/* FINANCEIRO V7 — LOGIN ADMINISTRATIVO */
+(function () {
+  const painel = document.createElement("section");
+  painel.className = "card";
+  painel.innerHTML = `
+    <h2>Acesso administrativo</h2>
+    <p id="loginMensagem">Verificando acesso...</p>
+    <div id="loginCampos" class="hidden">
+      <label>E-mail</label>
+      <input id="loginEmail" type="email" autocomplete="username">
+      <label>Senha</label>
+      <input id="loginSenha" type="password" autocomplete="current-password">
+      <div class="actions">
+        <button id="loginEntrar" type="button">Entrar</button>
+      </div>
+    </div>
+    <div id="loginAtivo" class="hidden">
+      <button id="loginSair" class="secondary" type="button">Sair</button>
+    </div>
+  `;
+
+  const main = document.querySelector("main");
+  main.prepend(painel);
+  const conteudo = [...main.children].filter(item => item !== painel);
+
+  function exibir(autenticado) {
+    conteudo.forEach(item => item.classList.toggle("hidden", !autenticado));
+    document.getElementById("loginCampos").classList.toggle("hidden", autenticado);
+    document.getElementById("loginAtivo").classList.toggle("hidden", !autenticado);
+    document.getElementById("loginMensagem").textContent = autenticado
+      ? "Acesso autorizado. Os dados financeiros ainda são locais."
+      : "Entre com seu e-mail e senha do Supabase.";
+  }
+
+  async function verificar() {
+    exibir(false);
+    if (!supabaseFinanceiro) {
+      document.getElementById("loginMensagem").textContent =
+        "Supabase indisponível. Verifique a configuração.";
+      document.getElementById("loginCampos").classList.add("hidden");
+      return;
+    }
+    try {
+      const { data, error } = await supabaseFinanceiro.auth.getUser();
+      exibir(!error && !!data?.user);
+    } catch {
+      exibir(false);
+    }
+  }
+
+  document.getElementById("loginEntrar").onclick = async function () {
+    this.disabled = true;
+    try {
+      const { error } = await supabaseFinanceiro.auth.signInWithPassword({
+        email: document.getElementById("loginEmail").value.trim(),
+        password: document.getElementById("loginSenha").value
+      });
+      if (error) throw error;
+      document.getElementById("loginSenha").value = "";
+      await verificar();
+    } catch {
+      document.getElementById("loginMensagem").textContent =
+        "Não foi possível entrar. Confira e-mail e senha.";
+    } finally {
+      this.disabled = false;
+    }
+  };
+
+  document.getElementById("loginSair").onclick = async function () {
+    await supabaseFinanceiro.auth.signOut();
+    exibir(false);
+  };
+
+  verificar();
+})();
+</script>
+
 
 </body>
 </html>
