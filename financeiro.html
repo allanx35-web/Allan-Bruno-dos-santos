@@ -212,5 +212,158 @@ el("atrasadas").textContent=atrasos;
 }
 renderizar();
 </script>
+
+<script>
+/* FINANCEIRO V7 - CONSULTA DE CONTRATOS */
+
+const renderizarOriginal = renderizar;
+let buscaFinanceiro = "";
+let filtroFinanceiro = "todos";
+let contratoAberto = null;
+
+const areaLista = document.getElementById("lista");
+
+const consulta = document.createElement("div");
+consulta.innerHTML = `
+  <div style="margin-bottom:22px">
+    <label>Pesquisar cliente ou projeto</label>
+    <input
+      id="buscarContrato"
+      type="search"
+      placeholder="Ex.: Allan, Bia, Casamento..."
+      oninput="pesquisarContratos()"
+    >
+
+    <label>Filtrar contratos</label>
+    <select id="filtrarContrato"
+      onchange="filtrarContratos()">
+      <option value="todos">Todos os contratos</option>
+      <option value="pendentes">Com saldo devedor</option>
+      <option value="quitados">Quitados</option>
+      <option value="atrasados">Com parcelas atrasadas</option>
+    </select>
+  </div>
+`;
+
+areaLista.parentNode.insertBefore(consulta, areaLista);
+
+function pesquisarContratos() {
+  buscaFinanceiro = document
+    .getElementById("buscarContrato")
+    .value.toLowerCase().trim();
+
+  renderizar();
+}
+
+function filtrarContratos() {
+  filtroFinanceiro = document
+    .getElementById("filtrarContrato")
+    .value;
+
+  renderizar();
+}
+
+function alternarContrato(id) {
+  contratoAberto = contratoAberto === id ? null : id;
+  renderizar();
+}
+
+renderizar = function() {
+  renderizarOriginal();
+
+  const cards = areaLista.querySelectorAll(".project");
+
+  contratos.forEach((contrato, indice) => {
+    const card = cards[indice];
+    if (!card) return;
+
+    const texto = (
+      contrato.cliente + " " + contrato.projeto
+    ).toLowerCase();
+
+    const totalPago = contrato.parcelas.reduce(
+      (soma, parcela) => soma + recebido(parcela), 0
+    );
+
+    const saldo = contrato.total - totalPago;
+
+    const atrasado = contrato.parcelas.some(parcela =>
+      parcela.valor > recebido(parcela) &&
+      parcela.vencimento < hoje()
+    );
+
+    let mostrar = texto.includes(buscaFinanceiro);
+
+    if (filtroFinanceiro === "pendentes") {
+      mostrar = mostrar && saldo > 0;
+    }
+
+    if (filtroFinanceiro === "quitados") {
+      mostrar = mostrar && saldo === 0;
+    }
+
+    if (filtroFinanceiro === "atrasados") {
+      mostrar = mostrar && atrasado;
+    }
+
+    card.style.display = mostrar ? "" : "none";
+
+    if (!mostrar) return;
+
+    const aberto = contratoAberto === contrato.id;
+
+    const resumo = document.createElement("div");
+    resumo.style.margin = "15px 0";
+
+    const situacao = saldo === 0
+      ? "Quitado"
+      : atrasado
+      ? "Com atraso"
+      : totalPago > 0
+      ? "Pagamento parcial"
+      : "Pendente";
+
+    resumo.innerHTML = `
+      <p>Recebido: <strong>${moeda(totalPago / 100)}</strong></p>
+      <p>Saldo devedor:
+        <strong style="color:#d5aa55">
+          ${moeda(saldo / 100)}
+        </strong>
+      </p>
+      <p>Situação: ${situacao}</p>
+    `;
+
+    const botao = document.createElement("button");
+    botao.textContent = aberto
+      ? "Fechar contrato"
+      : "Ver contrato";
+
+    botao.onclick = () => alternarContrato(contrato.id);
+
+    const detalhes = card.querySelectorAll(
+      ".installment, .actions"
+    );
+
+    detalhes.forEach(elemento => {
+      elemento.style.display = aberto ? "" : "none";
+    });
+
+    const primeiroDetalhe = card.querySelector(
+      ".installment, .actions"
+    );
+
+    if (primeiroDetalhe) {
+      card.insertBefore(resumo, primeiroDetalhe);
+      card.insertBefore(botao, primeiroDetalhe);
+    } else {
+      card.appendChild(resumo);
+      card.appendChild(botao);
+    }
+  });
+};
+
+renderizar();
+</script>
+
 </body>
 </html>
