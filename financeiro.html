@@ -365,5 +365,30 @@ renderizar = function() {
 renderizar();
 </script>
 
+<script src="/public/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  
+<script>
+const configFinanceiro = window.STORYMAKER_CONFIG;
+
+const supabaseFinanceiro =
+  configFinanceiro &&
+  window.supabase &&
+  configFinanceiro.supabaseUrl &&
+  configFinanceiro.supabaseAnonKey
+    ? window.supabase.createClient(
+        configFinanceiro.supabaseUrl,
+        configFinanceiro.supabaseAnonKey
+      )
+    : null;
+
+console.log(
+  supabaseFinanceiro
+    ? "Financeiro V7: Supabase conectado"
+    : "Financeiro V7: configuração indisponível"
+);
+</script>
+
 </body>
 </html>
