@@ -14,7 +14,7 @@
   const ID_BOTAO = "btnRelatorioPdfV8";
 
   const moeda = (valor) =>
-    Number(valor || 0).toLocaleString("pt-BR", {
+  (Number(valor || 0) / 100).toLocaleString("pt-BR", {
       style: "currency",
       currency: "BRL"
     });
