@@ -1,0 +1,413 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0E263E">
+  <title>Portfólio | A. S. Conteúdo Digital</title>
+  <style>
+    :root {
+      --navy: #0E263E;
+      --dark: #08131F;
+      --gold: #D5AA55;
+      --white: #EEF2F7;
+      --muted: #AEBFD0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--dark);
+      color: var(--white);
+    }
+    header {
+      background: var(--navy);
+      padding: 22px 6%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      color: var(--gold);
+      font-size: 20px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    nav a {
+      color: var(--white);
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .hero {
+      padding: 90px 6%;
+      text-align: center;
+      background: linear-gradient(135deg, #0E263E, #08131F);
+    }
+    .eyebrow {
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-size: 12px;
+    }
+    h1 {
+      font-size: clamp(32px, 6vw, 60px);
+      max-width: 850px;
+      margin: 20px auto;
+      line-height: 1.15;
+    }
+    .hero p, .intro {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+    main {
+      max-width: 1200px;
+      margin: auto;
+      padding: 60px 6%;
+    }
+    h2 { font-size: 30px; }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 30px 0;
+    }
+    .filters button {
+      border: 1px solid #35506B;
+      background: transparent;
+      color: var(--white);
+      padding: 11px 16px;
+      border-radius: 30px;
+      cursor: pointer;
+    }
+    .filters button.active {
+      background: var(--gold);
+      color: var(--dark);
+      border-color: var(--gold);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 22px;
+    }
+    .project {
+      background: var(--navy);
+      border: 1px solid #29445E;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .project img {
+      width: 100%;
+      height: 230px;
+      object-fit: cover;
+      display: block;
+      cursor: pointer;
+    }
+    .project-body { padding: 20px; }
+    .project-body h3 { margin: 8px 0; }
+    .project-body p {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .category {
+      color: var(--gold);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .gallery {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .gallery img {
+      width: 70px;
+      height: 70px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+    .status {
+      color: var(--muted);
+      padding: 20px 0;
+    }
+    footer {
+      text-align: center;
+      border-top: 1px solid #29445E;
+      padding: 30px;
+      color: var(--muted);
+    }
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(0,0,0,.94);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      cursor: pointer;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 95vw;
+      max-height: 90vh;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/">A. S. Conteúdo Digital</a>
+    <nav><a href="/">Página principal</a></nav>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">Portfólio · Produção criativa</div>
+    <h1>Histórias, marcas e projetos que ganham vida.</h1>
+    <p>Explore nossos trabalhos em diferentes áreas.</p>
+  </section>
+
+  <main>
+    <h2>Nossos trabalhos</h2>
+    <p class="intro">Conheça os projetos publicados em nosso portfólio.</p>
+    <div class="filters" id="filters"></div>
+    <div id="status" class="status">Carregando projetos...</div>
+    <div class="grid" id="projects"></div>
+  </main>
+
+  <footer>© A. S. Conteúdo Digital</footer>
+
+  <div class="lightbox" id="lightbox">
+    <img id="lightboxImage" alt="Fotografia ampliada">
+  </div>
+
+  <script src="/public/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const fallbackNiches = [
+      { id: "gastronomia", name: "Gastronomia" },
+      { id: "fotografia", name: "Fotografia" },
+      { id: "fitness", name: "Fitness e bem-estar" },
+      { id: "eventos", name: "Eventos" },
+      { id: "marcas", name: "Marcas" },
+      { id: "perfis", name: "Perfis pessoais" }
+    ];
+
+    const filtersEl = document.getElementById("filters");
+    const projectsEl = document.getElementById("projects");
+    const statusEl = document.getElementById("status");
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImage = document.getElementById("lightboxImage");
+
+    let niches = [];
+    let projects = [];
+    let activeFilter = "all";
+
+    const escapeHtml = value => String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+
+    function openImage(url) {
+      lightboxImage.src = url;
+      lightbox.classList.add("open");
+    }
+
+    lightbox.addEventListener("click", () => {
+      lightbox.classList.remove("open");
+      lightboxImage.removeAttribute("src");
+    });
+
+    function renderFilters() {
+      filtersEl.innerHTML = "";
+
+      const options = [
+        { id: "all", name: "Todos" },
+        ...niches
+      ];
+
+      options.forEach(niche => {
+        const button = document.createElement("button");
+        button.textContent = niche.name;
+        button.className =
+          activeFilter === niche.id ? "active" : "";
+
+        button.addEventListener("click", () => {
+          activeFilter = niche.id;
+          renderFilters();
+          renderProjects();
+        });
+
+        filtersEl.appendChild(button);
+      });
+    }
+
+    function getPhotoUrl(photo, client) {
+      if (!photo) return null;
+
+      let value = photo;
+
+      if (typeof photo === "object") {
+        value = photo.url || photo.path || photo.storage_path;
+      }
+
+      if (typeof value !== "string") return null;
+
+      if (/^https?:\/\//i.test(value)) return value;
+
+      const path = value
+        .replace(/^\/+/, "")
+        .replace(/^portfolio-photos\//, "");
+
+      return client.storage
+        .from("portfolio-photos")
+        .getPublicUrl(path).data.publicUrl;
+    }
+
+    function renderProjects() {
+      projectsEl.innerHTML = "";
+
+      const visible = projects.filter(project =>
+        activeFilter === "all" ||
+        String(project.niche_id) === String(activeFilter)
+      );
+
+      statusEl.textContent = visible.length
+        ? ""
+        : "Nenhum projeto publicado nesta categoria.";
+
+      visible.forEach(project => {
+        const niche = niches.find(n =>
+          String(n.id) === String(project.niche_id)
+        );
+
+        const card = document.createElement("article");
+        card.className = "project";
+
+        const body = document.createElement("div");
+        body.className = "project-body";
+
+        const category = document.createElement("div");
+        category.className = "category";
+        category.textContent = niche?.name || "Projeto";
+
+        const title = document.createElement("h3");
+        title.textContent = project.title || "Sem título";
+
+        const description = document.createElement("p");
+        description.textContent = project.description || "";
+
+        body.append(category, title, description);
+
+        const photos = project.photoUrls || [];
+
+        if (photos.length) {
+          const cover = document.createElement("img");
+          cover.src = photos[0];
+          cover.alt = project.title || "Fotografia";
+          cover.loading = "lazy";
+          cover.addEventListener("click", () =>
+            openImage(photos[0])
+          );
+          card.appendChild(cover);
+
+          if (photos.length > 1) {
+            const gallery = document.createElement("div");
+            gallery.className = "gallery";
+
+            photos.slice(1).forEach(url => {
+              const img = document.createElement("img");
+              img.src = url;
+              img.alt = project.title || "Fotografia";
+              img.loading = "lazy";
+              img.addEventListener("click", () =>
+                openImage(url)
+              );
+              gallery.appendChild(img);
+            });
+
+            body.appendChild(gallery);
+          }
+        }
+
+        card.appendChild(body);
+        projectsEl.appendChild(card);
+      });
+    }
+
+    async function loadPortfolio() {
+      const config = window.STORYMAKER_CONFIG;
+
+      if (!config?.supabaseUrl || !config?.supabaseAnonKey) {
+        statusEl.textContent =
+          "Não foi possível carregar a configuração do portfólio.";
+        return;
+      }
+
+      if (!window.supabase?.createClient) {
+        statusEl.textContent =
+          "Não foi possível iniciar a conexão com o Supabase.";
+        return;
+      }
+
+      try {
+        const client = window.supabase.createClient(
+          config.supabaseUrl,
+          config.supabaseAnonKey
+        );
+
+        const [nichesResult, projectsResult] =
+          await Promise.all([
+            client.from("portfolio_niches")
+              .select("*")
+              .order("name"),
+            client.from("portfolio_projects")
+              .select("*")
+              .eq("published", true)
+              .order("created_at", {
+                ascending: false
+              })
+          ]);
+
+        if (nichesResult.error) throw nichesResult.error;
+        if (projectsResult.error) throw projectsResult.error;
+
+        niches = nichesResult.data?.length
+          ? nichesResult.data
+          : fallbackNiches;
+
+        projects = (projectsResult.data || []).map(project => {
+          const photoList = Array.isArray(project.photos)
+            ? project.photos
+            : Array.isArray(project.photo_urls)
+              ? project.photo_urls
+              : [];
+
+          return {
+            ...project,
+            photoUrls: photoList
+              .map(photo => getPhotoUrl(photo, client))
+              .filter(Boolean)
+          };
+        });
+
+        renderFilters();
+        renderProjects();
+      } catch (error) {
+        console.error("Erro no portfólio:", error);
+        statusEl.textContent =
+          "Não foi possível carregar os projetos. Verifique a conexão.";
+      }
+    }
+
+    loadPortfolio();
+  </script>
+</body>
+</html>
